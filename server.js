@@ -27,5 +27,19 @@ app.get("/ads", async (req, res) => {
   }
 });
 
+app.post("/ads", async (req, res) => {
+  try {
+    const { title, description, category, address, contacts, image } = req.body;
+    const result = await pool.query(
+      "INSERT INTO ads (title, description, category, address, contacts, image) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+      [title, description, category, address, contacts, image]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error("Ошибка при добавлении объявления:", error);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
+});
+
 const PORT = process.env.PORT || 5050;
 app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
