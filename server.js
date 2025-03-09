@@ -16,5 +16,16 @@ app.get("/", (req, res) => {
   res.send("Сервер работает!");
 });
 
+// 📌 Новый маршрут для получения всех объявлений
+app.get("/ads", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM ads");
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Ошибка при получении объявлений:", error);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
+});
+
 const PORT = process.env.PORT || 5050;
 app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
