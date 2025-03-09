@@ -2,160 +2,74 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const multer = require("multer");
+const { v2: cloudinary } = require("cloudinary");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 🔹 Подключаем базу данных
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 
-app.get("/", (req, res) => {
-  res.send("Сервер работает!");
+// 🔹 Настройки Cloudinary (API-ключи из `.env`)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 📌 Новый маршрут для получения всех объявлений
-app.get("/ads", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM ads");
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Ошибка при получении объявлений:", error);
-    res.status(500).json({ error: "Ошибка сервера" });
-  }
+// 🔹 Настройки Multer для Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "schenker-ads",
+    format: async (req, file) => "jpeg", // Все изображения сохраняем как JPEG
+    transformation: [{ width: 800, height: 600, crop: "limit" }], // Сжимаем перед загрузкой
+  },
 });
 
-app.post("/ads", async (req, res) => {
-  try {
-    const { title, description, category, address, contacts, image } = req.body;
-    const result = await pool.query(
-      "INSERT INTO ads (title, description, category, address, contacts, image) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-      [title, description, category, address, contacts, image]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error("Ошибка при добавлении объявления:", error);
-    res.status(500).json({ error: "Ошибка сервера" });
-  }
-});
+const upload = multer({ storage });
 
-const bcrypt = require("bcryptjs");
+// 🔹 Проверка JWT-токена
+const authenticateToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "Нет доступа" });
 
-app.post("/register", async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-
-    // 📌 Хэшируем пароль перед сохранением
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const result = await pool.query(
-      "INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email",
-      [name, email, hashedPassword]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error("Ошибка регистрации:", error);
-    res.status(500).json({ error: "Ошибка сервера" });
-  }
-});
-
-const jwt = require("jsonwebtoken");
-
-app.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // 📌 Ищем пользователя по email
-    const user = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-
-    if (user.rows.length === 0) {
-      return res.status(401).json({ error: "Неверные данные" });
-    }
-
-    // 📌 Сравниваем введённый пароль с хэшированным паролем из базы
-    const validPassword = await bcrypt.compare(password, user.rows[0].password);
-
-    if (!validPassword) {
-      return res.status(401).json({ error: "Неверные данные" });
-    }
-
-    // 📌 Создаём JWT-токен
-    const token = jwt.sign({ id: user.rows[0].id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-
-    res.json({ token });
-  } catch (error) {
-    console.error("Ошибка входа:", error);
-    res.status(500).json({ error: "Ошибка сервера" });
-  }
-});
-
-const verifyToken = (req, res, next) => {
-  const token = req.header("Authorization");
-  if (!token) return res.status(401).json({ error: "Нет токена" });
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: "Недействительный токен" });
+    req.user = user;
     next();
-  } catch (error) {
-    res.status(401).json({ error: "Неверный токен" });
-  }
+  });
 };
 
-// 📌 Меняем `POST /ads`, добавляя `verifyToken`
-app.post("/ads", verifyToken, async (req, res) => {
+// 🔹 Добавление объявления (Загрузка изображения в Cloudinary)
+app.post("/ads", authenticateToken, upload.single("image"), async (req, res) => {
   try {
-    const { title, description, category, address, contacts, image } = req.body;
-    const result = await pool.query(
-      "INSERT INTO ads (title, description, category, address, contacts, image) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-      [title, description, category, address, contacts, image]
+    const { title, description, category, address, contacts } = req.body;
+    const imageUrl = req.file ? req.file.path : null;
+
+    if (!title || !category) {
+      return res.status(400).json({ error: "Название и категория обязательны" });
+    }
+
+    const newAd = await pool.query(
+      "INSERT INTO ads (title, description, category, address, contacts, image, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+      [title, description, category, address, contacts, imageUrl, req.user.userId]
     );
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error("Ошибка при добавлении объявления:", error);
+
+    res.status(201).json(newAd.rows[0]);
+  } catch (err) {
     res.status(500).json({ error: "Ошибка сервера" });
   }
 });
 
-app.delete("/ads/:id", verifyToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query("DELETE FROM ads WHERE id = $1", [id]);
-    res.json({ message: "Объявление удалено" });
-  } catch (error) {
-    console.error("Ошибка удаления объявления:", error);
-    res.status(500).json({ error: "Ошибка сервера" });
-  }
-});
-
-app.get("/ads", async (req, res) => {
-  try {
-    const { category, search } = req.query;
-    let query = "SELECT * FROM ads WHERE 1=1";
-    let params = [];
-
-    if (category) {
-      params.push(category);
-      query += ` AND category = $${params.length}`;
-    }
-
-    if (search) {
-      params.push(`%${search}%`);
-      query += ` AND (title ILIKE $${params.length} OR description ILIKE $${params.length})`;
-    }
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Ошибка при фильтрации объявлений:", error);
-    res.status(500).json({ error: "Ошибка сервера" });
-  }
-});
-
-
-
+// 🔹 Запуск сервера
 const PORT = process.env.PORT || 5050;
 app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
