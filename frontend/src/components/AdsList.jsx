@@ -5,7 +5,7 @@ const AdsList = ({ searchQuery }) => {
   const [ads, setAds] = useState([]);
 
   useEffect(() => {
-    fetch("/api/ads")
+    fetch("https://schenker-production.up.railway.app/ads")
       .then((res) => res.json())
       .then((data) => setAds(data));
   }, []);

@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const fileUpload = require("express-fileupload");
 const { Pool } = require("pg");
+const multer = require("multer");
 
 const app = express();
 app.use(cors());
@@ -50,6 +51,20 @@ app.post("/ads", async (req, res) => {
     console.error("Ошибка при добавлении объявления:", err);
     res.status(500).json({ error: "Ошибка сервера" });
   }
+});
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
+});
+const upload = multer({ storage });
+
+app.post("/upload", upload.single("photo"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "Файл не загружен" });
+  }
+  const fileUrl = `https://schenker-production.up.railway.app/uploads/${req.file.filename}`;
+  res.json({ url: fileUrl });
 });
 
 // Запуск сервера

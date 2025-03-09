@@ -1,33 +1,77 @@
 import React, { useState } from "react";
-import "./AddAdForm.css";
 
 function AddAdForm({ onClose }) {
-  const [formData, setFormData] = useState({ title: "", description: "", category: "Cosmetic", imageUrl: "" });
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Cosmetic");
+  const [address, setAddress] = useState("");
+  const [contact, setContact] = useState("");
+  const [photos, setPhotos] = useState([]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Объявление добавлено:", formData);
-    setFormData({ title: "", description: "", category: "Cosmetic", imageUrl: "" });
-    onClose();
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("photo", file);
+
+    try {
+      const response = await fetch("https://schenker-production.up.railway.app/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      console.log("Загруженное фото:", data.url);
+      setPhotos([...photos, data.url]); // добавляем ссылку на фото
+    } catch (error) {
+      console.error("Ошибка загрузки фото:", error);
+    }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    const newAd = {
+      title,
+      description,
+      category,
+      address,
+      contact,
+      photos,
+    };
+
+    try {
+      const response = await fetch("https://schenker-production.up.railway.app/ads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newAd),
+      });
+
+      const result = await response.json();
+      console.log("Объявление создано:", result);
+      onClose();
+    } catch (error) {
+      console.error("Ошибка добавления объявления:", error);
+    }
   };
 
   return (
     <div className="modal">
-      <div className="modal-content">
-        <button className="close-btn" onClick={onClose}>✖</button>
-        <h2>Создание объявления</h2>
-        <form onSubmit={handleSubmit}>
-          <input type="text" placeholder="Название" onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
-          <textarea placeholder="Описание" onChange={(e) => setFormData({ ...formData, description: e.target.value })}></textarea>
-          <select onChange={(e) => setFormData({ ...formData, category: e.target.value })}>
-            <option value="Cosmetic">Косметика</option>
-            <option value="Clothes">Одежда</option>
-            <option value="Furniture">Мебель</option>
-          </select>
-          <input type="text" placeholder="Ссылка на изображение" onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })} />
-          <button type="submit">Добавить</button>
-        </form>
-      </div>
+      <h2>Создание объявления</h2>
+      <form onSubmit={handleSubmit}>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Название" required />
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Описание" required />
+        <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Адрес" required />
+        <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Контакт" required />
+        <select value={category} onChange={(e) => setCategory(e.target.value)}>
+          <option value="Cosmetic">Cosmetic</option>
+          <option value="Clothes">Clothes</option>
+          <option value="Furniture">Furniture</option>
+        </select>
+        <input type="file" onChange={handleFileUpload} />
+        <button type="submit">Опубликовать</button>
+      </form>
     </div>
   );
 }
