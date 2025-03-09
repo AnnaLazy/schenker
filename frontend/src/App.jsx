@@ -2,15 +2,12 @@ import React, { useState, useEffect } from "react";
 import AdsList from "./components/AdsList";
 import AddAdForm from "./components/AddAdForm";
 import AuthForm from "./components/AuthForm";
-import Header from "./components/Header";
-import SearchBar from "./components/SearchBar";
 import "./App.css";
 
 function App() {
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [isAdModalOpen, setAdModalOpen] = useState(false);
   const [user, setUser] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -30,16 +27,29 @@ function App() {
 
   return (
     <div className="container">
-      {/* Шапка с логотипом и кнопками */}
-      <Header onAuthClick={() => setAuthModalOpen(true)} user={user} onLogout={handleLogout} onAddAd={() => setAdModalOpen(true)} />
+      <header>
+        <h1>Schenker Club</h1>
+        <div className="header-buttons">
+          {user ? (
+            <>
+              <span>Привет, {user.name}</span>
+              <button className="logout-btn" onClick={handleLogout}>Выйти</button>
+            </>
+          ) : (
+            <button className="auth-btn" onClick={() => setAuthModalOpen(true)}>Войти / Регистрация</button>
+          )}
+          {user && <button className="add-btn" onClick={() => setAdModalOpen(true)}>+ Добавить объявление</button>}
+        </div>
+      </header>
 
-      {/* Поле поиска */}
-      <SearchBar onSearch={setSearchQuery} />
+      <main>
+        <div className="search-bar">
+          <input type="text" placeholder="Поиск..." />
+          <button>🔍</button>
+        </div>
+        <AdsList />  {/* Обязательно должен быть здесь! */}
+      </main>
 
-      {/* Список объявлений */}
-      <AdsList searchQuery={searchQuery} />
-
-      {/* Модальные окна */}
       {isAuthModalOpen && <AuthForm onClose={() => setAuthModalOpen(false)} onLogin={handleLogin} />}
       {isAdModalOpen && <AddAdForm onClose={() => setAdModalOpen(false)} />}
     </div>

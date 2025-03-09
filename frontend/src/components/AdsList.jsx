@@ -4,14 +4,20 @@ const AdsList = () => {
   const [ads, setAds] = useState([]);
 
   useEffect(() => {
-    fetch("https://schenker-production.up.railway.app/ads") // Замени на актуальный URL
+    fetch("https://schenker-production.up.railway.app/ads")
       .then((res) => res.json())
       .then((data) => {
-        console.log("Данные с сервера:", data); // Проверяем, приходят ли данные
-        setAds(Array.isArray(data) ? data : []); // Проверяем, массив ли это
+        console.log("Данные с сервера:", data);
+        if (Array.isArray(data)) {
+          setAds(data);
+        } else {
+          console.error("Ошибка: данные не массив", data);
+        }
       })
       .catch((err) => console.error("Ошибка загрузки объявлений:", err));
   }, []);
+
+  console.log("ads state:", ads);
 
   return (
     <div className="ads-container">
