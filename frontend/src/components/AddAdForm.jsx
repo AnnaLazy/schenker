@@ -9,6 +9,7 @@ const AddAdForm = ({ onAdAdded }) => {
   const [contact, setContact] = useState("");
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [error, setError] = useState("");
 
   // Функция для обработки загрузки изображения
   const handleImageUpload = async (event) => {
@@ -37,32 +38,49 @@ const AddAdForm = ({ onAdAdded }) => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("Вы должны войти в систему, чтобы добавить объявление.");
+      return;
+    }
+
     const newAd = { title, description, category, address, contact, image };
 
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/ads`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newAd),
-    });
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/ads`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // ✅ Добавлен токен
+        },
+        body: JSON.stringify(newAd),
+      });
 
-    if (response.ok) {
-      const addedAd = await response.json();
-      onAdAdded(addedAd);
-      setTitle("");
-      setDescription("");
-      setCategory("");
-      setAddress("");
-      setContact("");
-      setImage(null);
-      setPreview(null);
-    } else {
-      console.error("Ошибка при добавлении объявления");
+      if (response.ok) {
+        const addedAd = await response.json();
+        onAdAdded(addedAd);
+        setTitle("");
+        setDescription("");
+        setCategory("");
+        setAddress("");
+        setContact("");
+        setImage(null);
+        setPreview(null);
+        setError("");
+      } else {
+        const data = await response.json();
+        setError(data.error || "Ошибка при добавлении объявления");
+      }
+    } catch (error) {
+      console.error("Ошибка:", error);
+      setError("Ошибка сервера, попробуйте позже.");
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="add-ad-form">
       <h2>Создание объявления</h2>
+      {error && <p className="error">{error}</p>}
       <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Название" required />
       <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Описание" required />
       <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Адрес" />

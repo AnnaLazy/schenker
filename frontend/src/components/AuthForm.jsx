@@ -1,34 +1,52 @@
 import { useState } from "react";
-import { API_URL } from "../config";
 
-const AuthForm = ({ type }) => {
+const AuthForm = ({ onLoginSuccess, closeModal }) => {
+  const [isRegister, setIsRegister] = useState(false);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const response = await fetch(`${API_URL}/${type}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
 
-    const data = await response.json();
-    if (response.ok) {
+    const url = isRegister ? "/register" : "/login";
+    const body = isRegister ? { name, email, password } : { email, password };
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}${url}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Ошибка входа/регистрации");
+
       localStorage.setItem("token", data.token);
-      alert(`${type === "register" ? "Регистрация" : "Вход"} успешен!`);
-    } else {
-      alert("Ошибка: " + data.error);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      onLoginSuccess(data.user);
+      closeModal();
+    } catch (err) {
+      setError(err.message);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>{type === "register" ? "Регистрация" : "Вход"}</h2>
-      <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} required />
-      <input type="password" placeholder="Пароль" onChange={(e) => setPassword(e.target.value)} required />
-      <button type="submit">{type === "register" ? "Зарегистрироваться" : "Войти"}</button>
-    </form>
+    <div className="modal">
+      <form onSubmit={handleSubmit}>
+        <h2>{isRegister ? "Регистрация" : "Вход"}</h2>
+        {isRegister && <input type="text" placeholder="Имя" value={name} onChange={(e) => setName(e.target.value)} required />}
+        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input type="password" placeholder="Пароль" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        {error && <p className="error">{error}</p>}
+        <button type="submit">{isRegister ? "Зарегистрироваться" : "Войти"}</button>
+        <p onClick={() => setIsRegister(!isRegister)}>
+          {isRegister ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться"}
+        </p>
+      </form>
+    </div>
   );
 };
 
