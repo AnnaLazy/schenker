@@ -1,53 +1,38 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import "./AuthForm.css";
 
-const AuthForm = ({ onLoginSuccess, closeModal }) => {
+function AuthForm({ onClose, onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [formData, setFormData] = useState({ name: "", email: "", password: "" });
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError("");
-
-    const url = isRegister ? "/register" : "/login";
-    const body = isRegister ? { name, email, password } : { email, password };
-
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}${url}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Ошибка входа/регистрации");
-
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      onLoginSuccess(data.user);
-      closeModal();
-    } catch (err) {
-      setError(err.message);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (isRegister && !formData.name) {
+      alert("Введите имя!");
+      return;
     }
+    onLogin({ name: formData.name, email: formData.email });
   };
 
   return (
     <div className="modal">
-      <form onSubmit={handleSubmit}>
+      <div className="modal-content">
+        <button className="close-btn" onClick={onClose}>✖</button>
         <h2>{isRegister ? "Регистрация" : "Вход"}</h2>
-        {isRegister && <input type="text" placeholder="Имя" value={name} onChange={(e) => setName(e.target.value)} required />}
-        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Пароль" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        {error && <p className="error">{error}</p>}
-        <button type="submit">{isRegister ? "Зарегистрироваться" : "Войти"}</button>
+        <form onSubmit={handleSubmit}>
+          {isRegister && (
+            <input type="text" placeholder="Имя" onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+          )}
+          <input type="email" placeholder="Email" onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+          <input type="password" placeholder="Пароль" onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
+          <button type="submit">{isRegister ? "Зарегистрироваться" : "Войти"}</button>
+        </form>
         <p onClick={() => setIsRegister(!isRegister)}>
-          {isRegister ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться"}
+          {isRegister ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Регистрация"}
         </p>
-      </form>
+      </div>
     </div>
   );
-};
+}
 
 export default AuthForm;

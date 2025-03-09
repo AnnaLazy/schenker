@@ -1,0 +1,22 @@
+.ads-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  
+  .ad-card {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    width: 200px;
+    text-align: center;
+  }
+  
+  .no-ads {
+    text-align: center;
+    font-size: 16px;
+    color: gray;
+  }
