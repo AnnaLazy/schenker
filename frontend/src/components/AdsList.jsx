@@ -1,30 +1,36 @@
-import { useEffect, useState } from "react";
-import { API_URL } from "../config";
+import { useState, useEffect } from "react";
 
-const AdsList = () => {
+const AdsList = ({ searchQuery, selectedCategory }) => {
   const [ads, setAds] = useState([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/ads`)
-      .then((res) => res.json())
+    fetch(`${import.meta.env.VITE_API_URL}/ads`)
+      .then((response) => response.json())
       .then((data) => setAds(data))
-      .catch((err) => console.error("Ошибка загрузки объявлений:", err));
+      .catch((error) => console.error("Ошибка загрузки объявлений:", error));
   }, []);
 
+  // Фильтрация объявлений
+  const filteredAds = ads.filter((ad) => {
+    return (
+      ad.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      (selectedCategory === "All" || ad.category === selectedCategory)
+    );
+  });
+
   return (
-    <div>
-      <h2>Объявления</h2>
-      <ul>
-        {ads.length > 0 ? (
-          ads.map((ad) => (
-            <li key={ad.id}>
-              <strong>{ad.title}</strong> - {ad.description}
-            </li>
-          ))
-        ) : (
-          <p>Объявлений пока нет.</p>
-        )}
-      </ul>
+    <div className="ads-list">
+      {filteredAds.length === 0 ? <p>Объявлений пока нет.</p> : null}
+      {filteredAds.map((ad) => (
+        <div key={ad.id} className="ad-card">
+          {ad.image && <img src={ad.image} alt={ad.title} />}
+          <h3>{ad.title}</h3>
+          <p>{ad.description}</p>
+          <p><strong>Категория:</strong> {ad.category}</p>
+          <p><strong>Адрес:</strong> {ad.address}</p>
+          <p><strong>Контакты:</strong> {ad.contact}</p>
+        </div>
+      ))}
     </div>
   );
 };
