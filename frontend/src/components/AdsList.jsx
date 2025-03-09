@@ -1,30 +1,33 @@
-import React, { useState, useEffect } from "react";
-import "./AdsList.css";
+import React, { useEffect, useState } from "react";
 
-const AdsList = ({ searchQuery }) => {
+const AdsList = () => {
   const [ads, setAds] = useState([]);
 
   useEffect(() => {
-    fetch("https://schenker-production.up.railway.app/ads")
+    fetch("https://schenker-production.up.railway.app/ads") // Замени на актуальный URL
       .then((res) => res.json())
-      .then((data) => setAds(data));
+      .then((data) => {
+        console.log("Данные с сервера:", data); // Проверяем, приходят ли данные
+        setAds(Array.isArray(data) ? data : []); // Проверяем, массив ли это
+      })
+      .catch((err) => console.error("Ошибка загрузки объявлений:", err));
   }, []);
-
-  const filteredAds = ads.filter(ad =>
-    ad.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <div className="ads-container">
-      {filteredAds.length > 0 ? (
-        filteredAds.map((ad) => (
+      {ads.length === 0 ? (
+        <p>Объявлений пока нет.</p>
+      ) : (
+        ads.map((ad) => (
           <div key={ad.id} className="ad-card">
             <h3>{ad.title}</h3>
             <p>{ad.description}</p>
+            <p><b>Категория:</b> {ad.category}</p>
+            <p><b>Адрес:</b> {ad.address}</p>
+            <p><b>Контакты:</b> {ad.contacts}</p>
+            {ad.image && <img src={ad.image} alt={ad.title} width="200" />}
           </div>
         ))
-      ) : (
-        <p className="no-ads">Объявлений пока нет.</p>
       )}
     </div>
   );
