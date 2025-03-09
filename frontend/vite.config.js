@@ -1,11 +1,16 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: "./", // Указываем относительный путь для корректной работы
   build: {
-    outDir: "dist" // Vercel ожидает, что билды находятся в dist
-  }
-})
+    outDir: 'dist',
+  },
+  server: {
+    port: 5173,
+  },
+  preview: {
+    port: 4173,
+  },
+});
