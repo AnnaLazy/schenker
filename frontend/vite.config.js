@@ -1,16 +1,19 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: '/', // Если деплоить в поддиректорию – поменяй на '/subdir/'
   build: {
-    outDir: 'dist',
+    outDir: 'dist'
   },
   server: {
-    port: 5173,
-  },
-  preview: {
-    port: 4173,
-  },
+    proxy: {
+      '/api': { // Исправлено на `/api` для лучшей масштабируемости
+        target: import.meta.env.VITE_API_URL || 'https://schenker-production.up.railway.app',
+        changeOrigin: true,
+        secure: true
+      }
+    }
+  }
 });

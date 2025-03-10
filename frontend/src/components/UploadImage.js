@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import imageCompression from "browser-image-compression";
 
 const UploadImage = ({ onImageUpload }) => {
   const [image, setImage] = useState(null);
+  const [error, setError] = useState(null);
 
   const handleImageChange = async (event) => {
     const file = event.target.files[0];
@@ -16,6 +17,7 @@ const UploadImage = ({ onImageUpload }) => {
     };
 
     try {
+      setError(null);
       const compressedFile = await imageCompression(file, options);
       const reader = new FileReader();
       reader.readAsDataURL(compressedFile);
@@ -25,13 +27,15 @@ const UploadImage = ({ onImageUpload }) => {
       };
     } catch (error) {
       console.error("Ошибка сжатия изображения:", error);
+      setError("Не удалось загрузить изображение. Попробуйте другой файл.");
     }
   };
 
   return (
     <div>
       <input type="file" accept="image/*" onChange={handleImageChange} />
-      {image && <img src={image} alt="Preview" style={{ width: "100px" }} />}
+      {error && <p className="error">{error}</p>}
+      {image && <img src={image} alt="Preview" style={{ width: "100px" }} onError={() => setError("Ошибка загрузки изображения")} />}
     </div>
   );
 };

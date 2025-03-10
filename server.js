@@ -1,23 +1,41 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const fileUpload = require("express-fileupload");
 const { Pool } = require("pg");
 const multer = require("multer");
+const { v2: cloudinary } = require("cloudinary");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "10mb" })); // Увеличиваем лимит на JSON (изображения могут быть большими)
-app.use(fileUpload()); // Подключаем middleware для загрузки файлов
+app.use(express.json({ limit: "10mb" }));
 
-app.get("/", (req, res) => {
-  res.send("Сервер работает!");
+// Настройка Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Подключение к базе данных
+// Настройка хранилища в Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "schenker_ads", // Название папки в Cloudinary
+    allowed_formats: ["jpg", "png", "jpeg"],
+  },
+});
+const upload = multer({ storage });
+
+// Подключение к базе данных PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
+});
+
+// Проверка работы сервера
+app.get("/", (req, res) => {
+  res.send("Сервер работает!");
 });
 
 // Получение всех объявлений
@@ -40,9 +58,8 @@ app.post("/ads", async (req, res) => {
       return res.status(400).json({ error: "Заполните все обязательные поля" });
     }
 
-    // Сохраняем объявление в базе
     const result = await pool.query(
-      "INSERT INTO ads (title, description, category, address, contact, image) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+      "INSERT INTO ads (title, description, category, address, contact, image, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *",
       [title, description, category, address, contact, image]
     );
 
@@ -53,18 +70,19 @@ app.post("/ads", async (req, res) => {
   }
 });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
-});
-const upload = multer({ storage });
-
-app.post("/upload", upload.single("photo"), (req, res) => {
+// Маршрут для загрузки изображений в Cloudinary
+app.post("/upload", upload.single("photo"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "Файл не загружен" });
   }
-  const fileUrl = `https://schenker-production.up.railway.app/uploads/${req.file.filename}`;
-  res.json({ url: fileUrl });
+
+  try {
+    const fileUrl = req.file.path; // Cloudinary автоматически даёт ссылку на загруженное изображение
+    res.json({ url: fileUrl });
+  } catch (error) {
+    console.error("Ошибка загрузки файла:", error);
+    res.status(500).json({ error: "Ошибка при загрузке файла" });
+  }
 });
 
 // Запуск сервера

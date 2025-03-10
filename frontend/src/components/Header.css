@@ -2,22 +2,27 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 15px 20px;
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .logo {
   font-size: 24px;
   font-weight: bold;
+  color: #333;
+  text-decoration: none;
 }
 
 .header-buttons {
   display: flex;
-  gap: 10px;
+  gap: 15px; /* Увеличен отступ между кнопками */
+  align-items: center;
 }
 
+/* Универсальный стиль кнопок */
 .auth-btn, .logout-btn, .add-btn {
   padding: 10px 15px;
   background-color: #007bff;
@@ -25,4 +30,31 @@
   border: none;
   cursor: pointer;
   border-radius: 5px;
+  font-size: 14px;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.auth-btn:hover, .logout-btn:hover, .add-btn:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px); /* Добавляем легкий эффект при наведении */
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .header-buttons {
+    margin-top: 10px;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .auth-btn, .logout-btn, .add-btn {
+    width: 90%; /* Кнопки растягиваются на всю ширину */
+    max-width: 300px;
+  }
 }
